@@ -1,0 +1,391 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+---
+
+<MainLayout title="AI-Assisted SOC Investigation Engine">
+
+<section class="ai-engine">
+
+  <!-- AI BACKGROUND -->
+  <div class="ai-bg neural"></div>
+  <div class="ai-bg grid"></div>
+  <div class="ai-bg scanlines"></div>
+
+  <header class="header">
+    <h1>AI-Assisted SOC Investigation Engine</h1>
+    <p>
+      Risk-biased AI investigation loop correlating endpoint telemetry,
+      mutating context graphs, and assisting analysts during live incidents.
+    </p>
+  </header>
+
+  <div class="layout">
+
+    <!-- LEFT -->
+    <section class="panel reasoning">
+      <h2>AI Reasoning Loop</h2>
+      <div id="ai-log" class="terminal"></div>
+    </section>
+
+    <!-- CENTER -->
+    <section class="panel analyst-panel">
+      <h2>Analyst Console</h2>
+
+      <div class="console-bg"></div>
+
+      <div class="console-line">
+        <span class="prompt">ANALYST</span>
+        <span class="chevron">&gt;</span>
+        <input
+          id="analyst-input"
+          type="text"
+          placeholder="type query (tab to complete)"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="console-actions">
+        <button id="help-toggle">HELP [?]</button>
+      </div>
+
+      <div id="help-panel" class="help-panel hidden">
+        <div class="help-title">AVAILABLE QUERIES</div>
+        <ul>
+          <li>why is this escalated</li>
+          <li>what should i do</li>
+          <li>next steps</li>
+          <li>confidence</li>
+          <li>containment</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="panel context">
+
+      <div class="state-block">
+        <span class="label">INVESTIGATION STATE</span>
+        <strong id="decision" class="state">MONITOR</strong>
+      </div>
+
+      <div class="confidence-block">
+        <span class="label">CONFIDENCE VECTOR</span>
+        <strong id="confidence">0.12</strong>
+        <div class="confidence-bar">
+          <div id="confidence-fill" class="confidence-fill"></div>
+        </div>
+      </div>
+
+      <div class="signal-block">
+        <div class="signal critical">CRITICAL <span>3</span></div>
+        <div class="signal high">HIGH <span>5</span></div>
+        <div class="signal medium">MEDIUM <span>7</span></div>
+      </div>
+
+      <div class="graph">
+        <div class="node host">HOST</div>
+        <div class="node process">powershell.exe</div>
+        <div class="node technique">T1003</div>
+      </div>
+
+      <div class="note">
+        Context graph dynamically mutates as inference depth increases.
+      </div>
+
+    </section>
+
+  </div>
+
+</section>
+
+<script>
+const logEl = document.getElementById("ai-log");
+const analystInput = document.getElementById("analyst-input");
+const confidenceEl = document.getElementById("confidence");
+const confidenceFill = document.getElementById("confidence-fill");
+const decisionEl = document.getElementById("decision");
+const helpToggle = document.getElementById("help-toggle");
+const helpPanel = document.getElementById("help-panel");
+
+let confidence = 0.12;
+let state = "MONITOR";
+
+const steps = [
+  { c: 0.18, msg: "Telemetry ingestion spike detected (EventID 4688)" },
+  { c: 0.32, msg: "Process ancestry graph expanded" },
+  { c: 0.47, msg: "Encoded PowerShell execution clustered" },
+  { c: 0.58, msg: "Credential access likelihood increasing (T1003)" },
+  { c: 0.66, msg: "Historical similarity confidence recalculated" },
+  { c: 0.74, msg: "Risk-biased threshold nearing escalation" },
+  { c: 0.82, msg: "Escalation criteria satisfied" }
+];
+
+let i = 0;
+
+function log(msg) {
+  const line = document.createElement("div");
+  line.textContent = `[AI] ${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+setInterval(() => {
+  if (i >= steps.length) return;
+  confidence = steps[i].c;
+  confidenceEl.textContent = confidence.toFixed(2);
+  confidenceFill.style.width = `${confidence * 100}%`;
+
+  log(`Confidence updated → ${confidence.toFixed(2)}`);
+  log(steps[i].msg);
+
+  if (confidence > 0.7 && state !== "ESCALATE") {
+    state = "ESCALATE";
+    decisionEl.textContent = "ESCALATE";
+    document.documentElement.style.setProperty("--threat", "#ef4444");
+    log("Decision flipped: MONITOR → ESCALATE");
+  }
+
+  i++;
+}, 1400);
+
+/* Analyst UX */
+const history = [];
+let h = -1;
+const responses = {
+  "why is this escalated": ["Credential dumping detected", "Risk threshold exceeded"],
+  "what should i do": ["Isolate host", "Preserve LSASS memory"],
+  "next steps": ["Contain endpoint", "Reset credentials"],
+  "confidence": [() => `Confidence: ${confidence.toFixed(2)}`],
+  "containment": ["Host isolation recommended"]
+};
+
+analystInput.addEventListener("keydown", (e) => {
+  const val = analystInput.value.toLowerCase().trim();
+  const cmds = Object.keys(responses);
+
+  if (e.key === "Enter" && val) {
+    history.push(val);
+    h = history.length;
+    log(`[ANALYST] ${val}`);
+    analystInput.value = "";
+    (responses[val] || ["Unknown query"]).forEach(r =>
+      log(typeof r === "function" ? r() : r)
+    );
+  }
+
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const m = cmds.find(c => c.startsWith(val));
+    if (m) analystInput.value = m;
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (h > 0) analystInput.value = history[--h];
+  }
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    analystInput.value = history[++h] || "";
+  }
+});
+
+helpToggle.onclick = () => helpPanel.classList.toggle("hidden");
+</script>
+
+<style>
+:root {
+  --threat: #22d3ee;
+}
+
+.ai-engine {
+  background: #020617;
+  min-height: 100vh;
+  padding: 3rem 0;
+  position: relative;
+}
+
+.ai-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.neural {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(34,211,238,0.15), transparent 45%),
+    radial-gradient(circle at 70% 60%, rgba(239,68,68,0.15), transparent 45%);
+  animation: drift 30s linear infinite;
+}
+
+.grid {
+  background:
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.15;
+}
+
+.scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.04),
+    rgba(255,255,255,0.04) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  opacity: 0.2;
+}
+
+@keyframes drift {
+  to { transform: translate(-40px, -30px); }
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr 0.9fr;
+  gap: 1.6rem;
+}
+
+.panel {
+  background: rgba(2,6,23,0.95);
+  border: 1px solid #1f2937;
+  padding: 1.4rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal {
+  font-family: Consolas, monospace;
+  font-size: 0.72rem;
+  color: #9ca3af;
+  line-height: 1.6;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+/* ANALYST CONSOLE */
+.analyst-panel {
+  position: relative;
+}
+
+.console-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, transparent 40%, rgba(239,68,68,0.08), transparent 60%);
+  animation: sweep 6s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes sweep {
+  to { background-position: 200% 0; }
+}
+
+.console-line {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 1rem;
+  font-family: Consolas, monospace;
+}
+
+.prompt {
+  color: var(--threat);
+}
+
+.chevron {
+  color: var(--threat);
+}
+
+.console-line input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--threat);
+  color: #e5e7eb;
+  outline: none;
+}
+
+.console-actions {
+  margin-top: 1rem;
+}
+
+.console-actions button {
+  background: transparent;
+  border: 1px solid var(--threat);
+  color: var(--threat);
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.help-panel {
+  margin-top: 1rem;
+  border: 1px dashed var(--threat);
+  padding: 0.8rem;
+  font-family: Consolas, monospace;
+  font-size: 0.65rem;
+  color: #9ca3af;
+}
+
+.hidden { display: none; }
+
+/* RIGHT PANEL */
+.context {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.state {
+  color: var(--threat);
+  font-size: 1.4rem;
+}
+
+.confidence-bar {
+  height: 6px;
+  background: #1f2937;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: var(--threat);
+}
+
+.signal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+}
+
+.signal.critical { color: #ef4444; }
+.signal.high { color: #f59e0b; }
+.signal.medium { color: #22d3ee; }
+
+.graph {
+  flex-grow: 1;
+  min-height: 200px;
+  border: 1px dashed var(--threat);
+  position: relative;
+}
+
+.node {
+  position: absolute;
+  border: 1px solid var(--threat);
+  padding: 0.3rem;
+  font-size: 0.6rem;
+  color: var(--threat);
+  background: rgba(2,6,23,0.9);
+}
+
+.host { top: 15px; left: 15px; }
+.process { top: 80px; left: 110px; }
+.technique { bottom: 15px; right: 20px; }
+
+.note {
+  font-size: 0.65rem;
+  color: #9ca3af;
+}
+</style>
+
+</MainLayout>

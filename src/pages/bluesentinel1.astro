@@ -1,0 +1,350 @@
+---
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BlueSentinel | SOC War Room</title>
+</head>
+
+<body>
+
+<!-- =========================
+STAGE 0 – INGESTION TERMINAL
+========================= -->
+
+<div id="entryTerminal" class="entry-terminal">
+
+  <div class="scanline"></div>
+
+  <div id="liveFeed"></div>
+
+  <div class="enter-blink">
+    PRESS ENTER TO ACCESS RULE ENGINE
+  </div>
+
+</div>
+
+
+<!-- =========================
+STAGE 1 – SOC WAR ROOM
+========================= -->
+
+<div id="ruleEngine" class="war-room hidden">
+
+  <div class="header">
+    <div>● LIVE</div>
+    <div>BLUESENTINEL :: SOC WAR ROOM</div>
+    <div id="incidentState">INCIDENT STATE: MONITOR</div>
+  </div>
+
+  <div class="search-bar">
+    search&gt; <input id="searchInput" placeholder="filter incidents (lsass, powershell, T1003...)" />
+  </div>
+
+  <div class="stats">
+    <div>ACTIVE INCIDENTS <span id="incidentCount">3</span></div>
+    <div>AUTOMATIONS RUN <span id="automationCount">137</span></div>
+    <div>MTTR REDUCTION <span style="color:#00ff88;">93%</span></div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- INCIDENT QUEUE -->
+    <div class="panel">
+      <h3>INCIDENT QUEUE</h3>
+      <div id="incidentList"></div>
+    </div>
+
+    <!-- RESPONSE PLAYBOOK -->
+    <div class="panel">
+      <h3>RESPONSE PLAYBOOK</h3>
+      <div id="playbook">
+        <button onclick="executeAction('Isolate Host')">Isolate Host</button>
+        <button onclick="executeAction('Disable Account')">Disable Account</button>
+        <button onclick="executeAction('Block IOC')">Block IOC</button>
+      </div>
+
+      <h4>EXECUTION TIMELINE</h4>
+      <div id="timeline"></div>
+    </div>
+
+    <!-- AI CONTEXT -->
+    <div class="panel">
+      <h3>AI CONFIDENCE</h3>
+
+      <div class="confidence-bar">
+        <div id="confidenceFill"></div>
+      </div>
+
+      <div id="confidenceValue">0.58</div>
+
+      <div id="aiNotes"></div>
+
+      <h4>THREAT INTEL</h4>
+      <div id="intelBox"></div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<style>
+
+body {
+  margin: 0;
+  font-family: monospace;
+  background: radial-gradient(circle at center, #05070f 0%, #000 100%);
+  color: #e0e0e0;
+  overflow-x: hidden;
+}
+
+/* Entry Terminal */
+
+.entry-terminal {
+  height: 100vh;
+  padding: 60px;
+  color: #00f7ff;
+  position: relative;
+}
+
+.scanline {
+  position: absolute;
+  height: 2px;
+  width: 100%;
+  background: rgba(255,0,0,0.3);
+  animation: scan 5s linear infinite;
+}
+
+@keyframes scan {
+  0% { top:0; }
+  100% { top:100%; }
+}
+
+.enter-blink {
+  margin-top: 40px;
+  color: red;
+  animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+  0%,100% { opacity:1; }
+  50% { opacity:0.3; }
+}
+
+.hidden { display:none; }
+
+/* War Room */
+
+.war-room {
+  padding: 20px 40px;
+}
+
+.header {
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:15px;
+}
+
+.search-bar input {
+  background:none;
+  border:none;
+  border-bottom:1px solid #444;
+  color:#00f7ff;
+  width:300px;
+}
+
+.stats {
+  display:flex;
+  justify-content:space-between;
+  margin:20px 0;
+}
+
+.main-grid {
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap:30px;
+}
+
+.panel {
+  border-left:1px solid #111;
+  padding:15px;
+}
+
+.panel h3 {
+  color:#fff;
+  margin-top:0;
+}
+
+button {
+  width:100%;
+  margin-bottom:10px;
+  background:#0a0f1a;
+  color:#fff;
+  border:1px solid #222;
+  padding:8px;
+  cursor:pointer;
+}
+
+button:hover {
+  background:#111c2a;
+}
+
+.incident {
+  padding:12px;
+  margin-bottom:12px;
+  border-left:4px solid gray;
+  cursor:pointer;
+  background:rgba(255,255,255,0.02);
+}
+
+.incident.active {
+  background:rgba(255,0,0,0.1);
+  border-left:4px solid red;
+}
+
+.confidence-bar {
+  height:8px;
+  background:#111;
+  margin:10px 0;
+}
+
+#confidenceFill {
+  height:100%;
+  width:58%;
+  background:red;
+}
+
+#timeline {
+  font-size:12px;
+  color:#aaa;
+}
+
+#intelBox {
+  font-size:12px;
+  color:#ff6666;
+}
+
+</style>
+
+
+<script is:inline>
+
+let incidents = [
+  { id:1, severity:"CRITICAL", title:"Credential Dumping (LSASS)", confidence:0.58 },
+  { id:2, severity:"HIGH", title:"Encoded PowerShell Execution", confidence:0.42 },
+  { id:3, severity:"MEDIUM", title:"Process Ancestry Anomaly", confidence:0.31 }
+];
+
+let selectedIncident = null;
+let automationCount = 137;
+
+const incidentList = document.getElementById("incidentList");
+const timeline = document.getElementById("timeline");
+const confidenceFill = document.getElementById("confidenceFill");
+const confidenceValue = document.getElementById("confidenceValue");
+const aiNotes = document.getElementById("aiNotes");
+const intelBox = document.getElementById("intelBox");
+
+/* ENTRY SCREEN */
+
+document.addEventListener("keydown", e=>{
+  if(e.key==="Enter"){
+    document.getElementById("entryTerminal").classList.add("hidden");
+    document.getElementById("ruleEngine").classList.remove("hidden");
+  }
+});
+
+/* RENDER INCIDENTS */
+
+function renderIncidents(filter="") {
+  incidentList.innerHTML="";
+  incidents
+    .filter(i => i.title.toLowerCase().includes(filter.toLowerCase()))
+    .forEach(i=>{
+      const div=document.createElement("div");
+      div.className="incident";
+      div.textContent=`${i.severity} :: ${i.title}`;
+      div.onclick=()=>selectIncident(i);
+      incidentList.appendChild(div);
+    });
+}
+
+renderIncidents();
+
+/* SEARCH */
+
+document.getElementById("searchInput").addEventListener("input", e=>{
+  renderIncidents(e.target.value);
+});
+
+/* SELECT INCIDENT */
+
+function selectIncident(i){
+  selectedIncident=i;
+  document.querySelectorAll(".incident").forEach(el=>el.classList.remove("active"));
+  event.target.classList.add("active");
+  updateConfidence(i.confidence);
+  loadIntel(i);
+}
+
+/* CONFIDENCE */
+
+function updateConfidence(value){
+  confidenceFill.style.width=(value*100)+"%";
+  confidenceValue.textContent=value.toFixed(2);
+
+  if(value>0.8){
+    document.getElementById("incidentState").textContent="INCIDENT STATE: ESCALATED";
+    aiNotes.textContent="AI: Escalation threshold crossed. Human confirmation required.";
+  } else {
+    aiNotes.textContent="";
+  }
+}
+
+/* ACTION EXECUTION */
+
+function executeAction(action){
+  if(!selectedIncident) return;
+
+  automationCount++;
+  document.getElementById("automationCount").textContent=automationCount;
+
+  const time=new Date().toLocaleTimeString();
+  timeline.innerHTML+=`[${time}] ${action} executed<br>`;
+
+  selectedIncident.confidence+=0.15;
+  if(selectedIncident.confidence>1) selectedIncident.confidence=1;
+
+  updateConfidence(selectedIncident.confidence);
+
+  if(action==="Block IOC"){
+    propagateIOC();
+  }
+}
+
+/* IOC PROPAGATION */
+
+function propagateIOC(){
+  const newIOC = Math.random().toString(36).substring(2,10);
+  intelBox.innerHTML+=`New IOC detected → ${newIOC}<br>`;
+}
+
+/* THREAT INTEL */
+
+function loadIntel(i){
+  intelBox.innerHTML="";
+  if(i.severity==="CRITICAL"){
+    intelBox.innerHTML+=`
+    Hash e99a18c428cb38d5f260853678922e03 → Malicious<br>
+    IP 185.203.116.42 → C2 Infrastructure<br>
+    Domain sync-update[.]net → Suspicious
+    `;
+  }
+}
+
+</script>
+
+</body>
+</html>

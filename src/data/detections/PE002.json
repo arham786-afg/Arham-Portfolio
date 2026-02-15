@@ -1,0 +1,33 @@
+{
+  "id": "PE002",
+  "name": "Suspicious Process – Mimikatz Execution",
+  "severity": "CRITICAL",
+  "mitre": "T1003.001 – Credential Dumping",
+  "category": "Credential Access",
+  "why_it_matters": "Credential dumping enables lateral movement, privilege escalation, and full domain compromise if not contained quickly.",
+  "signals": [
+    "Windows Security Event ID 4688 (Process Creation)",
+    "Process name matches known credential dumping tools",
+    "Suspicious command-line arguments"
+  ],
+  "logic": {
+    "event_id": "4688",
+    "process_name": ["mimikatz.exe", "mimikatz"],
+    "confidence": "High when process execution is observed on non-admin endpoints"
+  },
+  "false_positives": [
+    "Security testing environments",
+    "Red team or authorized penetration testing",
+    "Malware research labs"
+  ],
+  "recommended_response": [
+    "Isolate affected host",
+    "Acquire LSASS-related telemetry",
+    "Review authentication logs for credential misuse"
+  ],
+  "improvements_next": [
+    "Add parent-child process correlation",
+    "Detect memory access to LSASS without process name reliance",
+    "Incorporate AMSI and PowerShell telemetry"
+  ]
+}

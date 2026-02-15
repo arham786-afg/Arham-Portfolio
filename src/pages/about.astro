@@ -1,0 +1,309 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+---
+
+<MainLayout title="About | Mohammed Bilaal Arham">
+
+<section class="about">
+
+<canvas id="bg"></canvas>
+
+<div class="wrapper">
+
+  <div class="left">
+
+    <h1 id="name" class="name"></h1>
+    <div class="role">CyberSecurity AI-Assisted Detection & Response Engineer</div>
+
+    <div class="card core">
+      <h2>Operator Core</h2>
+      <p>
+        AI-Assisted Detection & Response Engineer with 2.5 years of hands-on experience
+        owning high-severity security incidents and driving them to closure.
+      </p>
+      <p>
+        Detection engineering, SOAR automation, endpoint/cloud investigations,
+        MITRE ATT&CK mapped detections, AI-assisted decision support.
+      </p>
+    </div>
+
+    <div class="card skills">
+      <h2>Core Skills</h2>
+
+      <div class="skill" data-skill="Detection & Response">
+        Detection & Response
+      </div>
+
+      <div class="skill" data-skill="SOAR & Automation">
+        SOAR & Automation
+      </div>
+
+      <div class="skill" data-skill="Detection Engineering">
+        Detection Engineering
+      </div>
+
+      <div class="skill" data-skill="Threat Hunting">
+        Threat Hunting
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="right">
+
+    <div class="card terminal-card">
+      <h2>Operator Terminal</h2>
+      <div id="terminal" class="terminal"></div>
+    </div>
+
+    <div class="links">
+      <a href="https://github.com/arham786-afg" target="_blank">🐙 GitHub</a>
+      <a href="https://www.linkedin.com/in/mb-arham" target="_blank">🔗 LinkedIn</a>
+      <a href="mailto:mbarham786@gmail.com">✉ Email</a>
+      <a href="tel:9611167807">📞 Call</a>
+    </div>
+
+  </div>
+
+</div>
+
+</section>
+
+<script>
+/* ===============================
+   NAME TYPE EFFECT
+================================ */
+
+const nameText = "MOHAMMED BILAAL ARHAM";
+const nameEl = document.getElementById("name");
+let ni = 0;
+
+function typeName(){
+  if(ni < nameText.length){
+    nameEl.textContent += nameText[ni++];
+    setTimeout(typeName, 70);
+  }
+}
+typeName();
+
+/* ===============================
+   TERMINAL ENGINE
+================================ */
+
+const terminal = document.getElementById("terminal");
+
+function printLine(text){
+  const line = document.createElement("div");
+  line.textContent = text;
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function skillLog(skill){
+  printLine("[CONTEXT] " + skill);
+
+  if(skill === "Detection & Response"){
+    printLine("High severity alert triaged.");
+    printLine("Credential dumping pattern observed.");
+    printLine("Escalation threshold crossed.");
+  }
+
+  if(skill === "SOAR & Automation"){
+    printLine("Playbook execution triggered.");
+    printLine("Host isolation automated.");
+    printLine("MTTR reduced.");
+  }
+
+  if(skill === "Detection Engineering"){
+    printLine("Rule tuning in progress.");
+    printLine("False positive rate reduced.");
+  }
+
+  if(skill === "Threat Hunting"){
+    printLine("Behavioral anomaly detected.");
+    printLine("Hunt converted to detection.");
+  }
+}
+
+document.querySelectorAll(".skill").forEach(s=>{
+  s.addEventListener("click",()=>{
+    skillLog(s.dataset.skill);
+    particlePulse();
+  });
+});
+
+/* ===============================
+   PARTICLE SYSTEM
+================================ */
+
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener("resize",()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+let particles = [];
+let pulse = 0;
+let forming = true;
+
+for(let i=0;i<700;i++){
+  particles.push({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    vx:(Math.random()-0.5),
+    vy:(Math.random()-0.5),
+    tx:canvas.width/2,
+    ty:canvas.height/3
+  });
+}
+
+function particlePulse(){
+  pulse = 6;
+}
+
+window.addEventListener("scroll",()=>{
+  forming = false;
+});
+
+function drawTextShape(){
+  ctx.font = "bold 80px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("MBA", canvas.width/2, canvas.height/3);
+  const data = ctx.getImageData(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  let index = 0;
+  for(let y=0;y<canvas.height;y+=6){
+    for(let x=0;x<canvas.width;x+=6){
+      const alpha = data.data[(y*canvas.width + x)*4 + 3];
+      if(alpha > 128 && particles[index]){
+        particles[index].tx = x;
+        particles[index].ty = y;
+        index++;
+      }
+    }
+  }
+}
+
+drawTextShape();
+
+function animate(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  particles.forEach(p=>{
+    if(forming){
+      p.x += (p.tx - p.x)*0.05;
+      p.y += (p.ty - p.y)*0.05;
+    } else {
+      p.x += p.vx;
+      p.y += p.vy;
+    }
+
+    if(pulse > 0){
+      p.x += (Math.random()-0.5)*pulse;
+      p.y += (Math.random()-0.5)*pulse;
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,1.5,0,Math.PI*2);
+    ctx.fillStyle="rgba(34,211,238,0.8)";
+    ctx.fill();
+  });
+
+  if(pulse>0) pulse-=0.1;
+
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+
+<style>
+.about{
+  background:#020617;
+  min-height:100vh;
+  position:relative;
+  padding:4rem 0;
+  overflow:hidden;
+}
+
+canvas{
+  position:absolute;
+  inset:0;
+  z-index:0;
+}
+
+.wrapper{
+  position:relative;
+  z-index:2;
+  display:grid;
+  grid-template-columns:1.5fr 1fr;
+  gap:3rem;
+  max-width:1200px;
+  margin:auto;
+}
+
+.name{
+  font-size:2.6rem;
+  font-weight:700;
+  letter-spacing:2px;
+  margin-bottom:0.5rem;
+  color:#e5e7eb;
+}
+
+.role{
+  color:#22d3ee;
+  margin-bottom:2rem;
+}
+
+.card{
+  background:rgba(2,6,23,0.9);
+  border:1px solid #1f2937;
+  padding:1.5rem;
+  margin-bottom:2rem;
+}
+
+.card h2{
+  color:#22d3ee;
+  margin-bottom:1rem;
+}
+
+.skill{
+  padding:0.6rem;
+  margin-bottom:0.6rem;
+  border:1px solid #1f2937;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.skill:hover{
+  background:rgba(34,211,238,0.1);
+}
+
+.terminal{
+  background:#000;
+  min-height:200px;
+  font-family:monospace;
+  padding:1rem;
+  color:#9ca3af;
+  overflow-y:auto;
+}
+
+.links a{
+  display:block;
+  color:#22d3ee;
+  margin-bottom:0.6rem;
+  text-decoration:none;
+}
+
+.links a:hover{
+  color:white;
+}
+</style>
+
+</MainLayout>

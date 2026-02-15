@@ -1,0 +1,22 @@
+{
+  "scenario": "Credential Dumping Investigation",
+  "manual": {
+    "steps": [
+      "Review alert",
+      "Pull process logs",
+      "Search historical executions",
+      "Identify attack technique",
+      "Decide response"
+    ],
+    "mttr_minutes": 22
+  },
+  "ai_assisted": {
+    "steps": [
+      "Review enriched alert",
+      "Validate timeline",
+      "Confirm MITRE technique",
+      "Execute recommended response"
+    ],
+    "mttr_minutes": 1.5
+  }
+}

@@ -1,0 +1,432 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+---
+
+<MainLayout title="BlueSentinel :: SOC War Room">
+
+<section class="soc">
+
+  <!-- HEADER -->
+  <div class="topbar">
+    <div><span class="live-dot"></span> LIVE</div>
+    <div class="center-title">BLUESENTINEL :: SOC WAR ROOM</div>
+    <div>INCIDENT STATE: <strong id="incidentState">MONITOR</strong></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div>ACTIVE INCIDENTS <strong>3</strong></div>
+    <div>AUTOMATIONS RUN <strong id="actionsCount">0</strong></div>
+    <div>MTTR REDUCTION <strong class="green">93%</strong></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- INCIDENT QUEUE -->
+    <div class="panel">
+      <h3>INCIDENT QUEUE</h3>
+
+      <div class="incident critical active" data-severity="critical">
+        CRITICAL :: Credential Dumping (LSASS)
+      </div>
+
+      <div class="incident high" data-severity="high">
+        HIGH :: Encoded PowerShell
+      </div>
+
+      <div class="incident medium" data-severity="medium">
+        MEDIUM :: Process Anomaly
+      </div>
+    </div>
+
+    <!-- PLAYBOOK -->
+    <div class="panel">
+      <h3>RESPONSE PLAYBOOK</h3>
+
+      <button id="isolateBtn">Isolate Host</button>
+      <button id="disableBtn">Disable Account</button>
+      <button id="blockBtn">Block IOC</button>
+
+      <button id="reportBtn" class="hidden report">
+        Generate Report
+      </button>
+
+      <h4>EXECUTION TIMELINE</h4>
+      <div id="timeline" class="timeline"></div>
+    </div>
+
+    <!-- AI PANEL -->
+    <div class="panel">
+      <h3>AI CONFIDENCE</h3>
+
+      <div class="confidence-bar">
+        <div id="confidenceFill" class="confidence-fill"></div>
+      </div>
+
+      <div id="confidenceValue">0.25</div>
+
+      <div id="intelBox" class="intel">
+        AI: Monitoring signal cluster.
+      </div>
+
+      <!-- GRAPH -->
+      <div class="graph-container">
+        <svg id="graphLines"></svg>
+        <div id="graphNodes"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  let confidence = 0.25;
+  let actionsRun = 0;
+  let selectedSeverity = "critical";
+  let breachTriggered = false;
+
+  const severityWeights = {
+    critical: 0.35,
+    high: 0.20,
+    medium: 0.10
+  };
+
+  const confidenceFill = document.getElementById("confidenceFill");
+  const confidenceValue = document.getElementById("confidenceValue");
+  const incidentState = document.getElementById("incidentState");
+  const actionsCount = document.getElementById("actionsCount");
+  const timeline = document.getElementById("timeline");
+  const intelBox = document.getElementById("intelBox");
+  const reportBtn = document.getElementById("reportBtn");
+
+  const isolateBtn = document.getElementById("isolateBtn");
+  const disableBtn = document.getElementById("disableBtn");
+  const blockBtn = document.getElementById("blockBtn");
+
+  const graphNodes = document.getElementById("graphNodes");
+  const graphLines = document.getElementById("graphLines");
+
+  /* INCIDENT SELECTION */
+  document.querySelectorAll(".incident").forEach(card => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".incident").forEach(c => c.classList.remove("active"));
+      card.classList.add("active");
+      selectedSeverity = card.dataset.severity;
+    });
+  });
+
+  /* GRAPH FUNCTIONS */
+  function createNode(label, x, y, type="normal") {
+    const node = document.createElement("div");
+    node.className = "graph-node " + type;
+    node.style.left = x + "px";
+    node.style.top = y + "px";
+    node.textContent = label;
+    graphNodes.appendChild(node);
+    return node;
+  }
+
+  function connectNodes(n1, n2) {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+    const rect1 = n1.getBoundingClientRect();
+    const rect2 = n2.getBoundingClientRect();
+    const containerRect = graphNodes.getBoundingClientRect();
+
+    line.setAttribute("x1", rect1.left - containerRect.left + 40);
+    line.setAttribute("y1", rect1.top - containerRect.top + 15);
+    line.setAttribute("x2", rect2.left - containerRect.left + 40);
+    line.setAttribute("y2", rect2.top - containerRect.top + 15);
+    line.setAttribute("stroke", "rgba(255,0,0,0.4)");
+    line.setAttribute("stroke-width", "1");
+
+    graphLines.appendChild(line);
+  }
+
+  function initializeGraph() {
+    graphNodes.innerHTML = "";
+    graphLines.innerHTML = "";
+
+    const host = createNode("HOST", 40, 40, "host");
+    const process = createNode("powershell.exe", 200, 100);
+    const technique = createNode("T1003", 360, 40);
+
+    connectNodes(host, process);
+    connectNodes(process, technique);
+  }
+
+  function mutateGraph() {
+    const randomX = Math.random() * 350;
+    const randomY = Math.random() * 150;
+
+    const newNode = createNode(
+      "IOC_" + Math.random().toString(36).substring(2,6),
+      randomX,
+      randomY,
+      "ioc"
+    );
+
+    const host = graphNodes.querySelector(".host");
+    if (host) connectNodes(host, newNode);
+  }
+
+  /* UPDATE UI */
+  function updateConfidenceUI() {
+    confidenceFill.style.width = (confidence * 100) + "%";
+    confidenceValue.textContent = confidence.toFixed(2);
+
+    if (confidence >= 0.8 && !breachTriggered) {
+      breachTriggered = true;
+      triggerEscalation();
+    }
+  }
+
+  /* ESCALATION */
+  function triggerEscalation() {
+    incidentState.textContent = "ESCALATED";
+    document.body.classList.add("breach");
+    reportBtn.classList.remove("hidden");
+
+    document.querySelectorAll(".graph-node")
+      .forEach(n => n.style.borderColor = "red");
+
+    autoIntelStorm();
+  }
+
+  function autoIntelStorm() {
+    setInterval(() => {
+      if (confidence < 0.8) return;
+      const ioc = Math.random().toString(36).substring(2,8);
+      addIntel("New IOC correlated → " + ioc);
+    }, 2000);
+  }
+
+  /* ACTION EXECUTION */
+  function runAction(actionName) {
+
+    actionsRun++;
+    actionsCount.textContent = actionsRun;
+
+    confidence += severityWeights[selectedSeverity] || 0.05;
+    if (confidence > 1) confidence = 1;
+
+    addTimeline(actionName + " executed");
+    addIntel("Signal mutation observed (" + selectedSeverity + ")");
+
+    mutateGraph();
+    updateConfidenceUI();
+  }
+
+  function addTimeline(text) {
+    const time = new Date().toLocaleTimeString();
+    const line = document.createElement("div");
+    line.textContent = "[" + time + "] " + text;
+    timeline.prepend(line);
+  }
+
+  function addIntel(text) {
+    const line = document.createElement("div");
+    line.textContent = text;
+    intelBox.appendChild(line);
+  }
+
+  /* BUTTON EVENTS */
+  isolateBtn.addEventListener("click", () => runAction("Isolate Host"));
+  disableBtn.addEventListener("click", () => runAction("Disable Account"));
+  blockBtn.addEventListener("click", () => runAction("Block IOC"));
+  reportBtn.addEventListener("click", generateReport);
+
+  /* REPORT */
+  function generateReport() {
+
+    const report = `
+===== BLUESENTINEL INCIDENT REPORT =====
+
+State: ${incidentState.textContent}
+Confidence: ${confidence.toFixed(2)}
+Severity: ${selectedSeverity.toUpperCase()}
+Actions Executed: ${actionsRun}
+
+Primary Technique: T1003
+Host: WIN-ENG-01
+
+Generated: ${new Date().toString()}
+
+========================================
+`;
+
+    const blob = new Blob([report], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "BlueSentinel_Report.txt";
+    link.click();
+  }
+
+  initializeGraph();
+});
+</script>
+
+<style>
+.soc {
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 20%, #150000, #000 60%);
+  color: #e5e7eb;
+  padding: 2rem;
+  font-family: Consolas, monospace;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: red;
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+@keyframes pulse {
+  50% { opacity: .3; }
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.panel {
+  border: 1px solid #222;
+  padding: 1rem;
+  background: rgba(0,0,0,.8);
+}
+
+.incident {
+  margin-bottom: .8rem;
+  padding: .5rem;
+  border-left: 4px solid gray;
+  cursor: pointer;
+}
+
+.incident.active {
+  background: rgba(255,0,0,.15);
+}
+
+.critical { border-color: red; }
+.high { border-color: orange; }
+.medium { border-color: gray; }
+
+button {
+  width: 100%;
+  margin-bottom: .7rem;
+  padding: .6rem;
+  background: #111;
+  border: 1px solid #333;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1f2937;
+}
+
+.report {
+  border-color: red;
+}
+
+.hidden { display: none; }
+
+.timeline {
+  font-size: .8rem;
+  margin-top: 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.confidence-bar {
+  height: 6px;
+  background: #222;
+  margin-bottom: .5rem;
+}
+
+.confidence-fill {
+  height: 100%;
+  width: 25%;
+  background: red;
+  transition: width .4s ease;
+}
+
+.green { color: #22c55e; }
+
+.intel {
+  margin-top: 1rem;
+  font-size: .8rem;
+  color: #f87171;
+}
+
+.graph-container {
+  position: relative;
+  height: 220px;
+  margin-top: 1rem;
+  border: 1px dashed #222;
+  overflow: hidden;
+}
+
+#graphLines {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+#graphNodes {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.graph-node {
+  position: absolute;
+  padding: 4px 8px;
+  font-size: 10px;
+  background: rgba(0,0,0,0.8);
+  border: 1px solid #444;
+  color: #ccc;
+}
+
+.graph-node.host {
+  border-color: red;
+  color: red;
+}
+
+.graph-node.ioc {
+  border-color: orange;
+  color: orange;
+  animation: flicker 1.2s infinite;
+}
+
+@keyframes flicker {
+  50% { opacity: .6; }
+}
+
+body.breach {
+  background: radial-gradient(circle at center, #300000, #000);
+}
+</style>
+
+</MainLayout>
